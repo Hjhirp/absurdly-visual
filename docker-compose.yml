@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: absurdly-visual-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DEBUG=True
+      - MONGODB_URL=mongodb://mongo:27017
+      - REDIS_URL=redis://redis:6379
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - mongo
+      - redis
+    networks:
+      - absurdly-visual-network
+
+  frontend:
+    build: ./frontend
+    container_name: absurdly-visual-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - absurdly-visual-network
+
+  mongo:
+    image: mongo:7
+    container_name: absurdly-visual-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - absurdly-visual-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: absurdly-visual-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - absurdly-visual-network
+
+networks:
+  absurdly-visual-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  redis-data:
