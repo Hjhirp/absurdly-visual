@@ -298,7 +298,10 @@ class GameService:
                                 "nsfw": bool(card.nsfw),
                                 "pack": str(card.pack)
                             } for cid in sub.card_ids if (card := card_service.get_white_card(cid))
-                        ]
+                        ],
+                        "image_url": str(sub.image_url) if hasattr(sub, 'image_url') and sub.image_url else None,
+                        "audio_url": str(sub.audio_url) if hasattr(sub, 'audio_url') and sub.audio_url else None,
+                        "video_url": str(sub.video_url) if hasattr(sub, 'video_url') and sub.video_url else None
                     }
                     for sub in game.current_round.submissions
                 ] if game.state == GameState.JUDGING or game.state == GameState.ROUND_END else [],

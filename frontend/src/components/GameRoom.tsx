@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { GameStateData } from '../types/game.types';
+import React, { useState, useEffect } from 'react';
+import { GameStateData, WhiteCard as WhiteCardType } from '../types/game.types';
 import { BlackCard } from './BlackCard';
 import { WhiteCard } from './WhiteCard';
 import { CardHand } from './CardHand';
 import { PlayerList } from './PlayerList';
 import { VideoPlayer } from './VideoPlayer';
+import confetti from 'canvas-confetti';
 
 interface GameRoomProps {
   gameState: GameStateData;
@@ -12,7 +13,7 @@ interface GameRoomProps {
   onSubmitCards: (cardIds: string[]) => void;
   onSelectWinner: (submissionIndex: number) => void;
   onStartGame: () => void;
-  onRequestAI: (personality?: string) => void;
+  onRequestAI: () => void;
 }
 
 export const GameRoom: React.FC<GameRoomProps> = ({
@@ -26,6 +27,45 @@ export const GameRoom: React.FC<GameRoomProps> = ({
   const [selectedSubmission, setSelectedSubmission] = useState<number | null>(null);
 
   const isCzar = gameState.current_round?.czar_id === playerId;
+  
+  // Confetti effect when round ends
+  useEffect(() => {
+    if (gameState.state === 'round_end' || (gameState.state as string).includes('ROUND_END')) {
+      confetti({
+        particleCount: 100,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+    }
+  }, [gameState.state]);
+  
+  // Big confetti when game ends
+  useEffect(() => {
+    if (gameState.state === 'game_end' || (gameState.state as string).includes('GAME_END')) {
+      const duration = 3000;
+      const end = Date.now() + duration;
+      
+      const frame = () => {
+        confetti({
+          particleCount: 5,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 }
+        });
+        confetti({
+          particleCount: 5,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 }
+        });
+        
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      frame();
+    }
+  }, [gameState.state]);
   const hasSubmitted = gameState.current_round?.submissions.some(
     (sub) => sub.player_id === playerId
   );
@@ -110,7 +150,7 @@ export const GameRoom: React.FC<GameRoomProps> = ({
                   {canStartGame ? 'Start Game' : `Need ${3 - gameState.players.length} more player(s)`}
                 </button>
                 <button
-                  onClick={() => onRequestAI('absurd')}
+                  onClick={() => onRequestAI()}
                   className="w-full py-2 rounded-lg font-semibold bg-purple-600 hover:bg-purple-700 text-white transition-all duration-300"
                 >
                   + Add AI Bot
@@ -196,7 +236,9 @@ export const GameRoom: React.FC<GameRoomProps> = ({
                   <div>
                     <h3 className="text-xl font-bold text-white mb-4">Submissions:</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {gameState.current_round.submissions.map((submission, index) => (
+                      {gameState.current_round.submissions.map((submission, index) => {
+                        console.log(`Rendering submission ${index}:`, JSON.stringify(submission, null, 2));
+                        return (
                         <div
                           key={index}
                           onClick={() => isCzar && setSelectedSubmission(index)}
@@ -206,30 +248,28 @@ export const GameRoom: React.FC<GameRoomProps> = ({
                             ${isCzar ? 'hover:scale-105' : ''}
                           `}
                         >
-                          {/* Video for this submission */}
-                          <div className="mb-3 rounded-lg overflow-hidden bg-gray-800">
-                            {submission.video_url ? (
-                              submission.video_url.includes('placeholder') ? (
-                                <div className="w-full h-48 flex items-center justify-center bg-red-900/30">
-                                  <p className="text-white text-center px-4">
-                                    ❌ Video Generation Failed
-                                  </p>
-                                </div>
-                              ) : (
-                                <video
-                                  src={submission.video_url}
+                          {/* Image + Audio Preview */}
+                          <div className="bg-game-bg rounded-lg overflow-hidden">
+                            {submission.image_url ? (
+                              <div className="relative">
+                                <img
+                                  src={submission.image_url}
+                                  alt="Generated scene"
                                   className="w-full h-48 object-cover"
-                                  controls
-                                  loop
-                                  playsInline
                                 />
-                              )
+                                {submission.audio_url && (
+                                  <div className="absolute bottom-2 left-2 right-2">
+                                    <audio controls className="w-full h-8">
+                                      <source src={submission.audio_url} type="audio/wav" />
+                                    </audio>
+                                  </div>
+                                )}
+                              </div>
                             ) : (
                               <div className="w-full h-48 flex items-center justify-center">
                                 <div className="text-center">
-                                  <div className="animate-spin text-4xl mb-2">⏳</div>
-                                  <p className="text-white text-sm">Generating video...</p>
-                                  <p className="text-gray-400 text-xs mt-1">Up to 90 seconds</p>
+                                  <div className="animate-spin text-4xl mb-2">🎨</div>
+                                  <p className="text-white text-sm">Generating...</p>
                                 </div>
                               </div>
                             )}
@@ -242,7 +282,8 @@ export const GameRoom: React.FC<GameRoomProps> = ({
                             ))}
                           </div>
                         </div>
-                      ))}
+                      );
+                      })}
                     </div>
                     {isCzar && selectedSubmission !== null && (
                       <div className="mt-4 text-center">

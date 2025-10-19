@@ -230,7 +230,7 @@ class VeoService:
             result = black_card_text
             for white_text in white_card_texts:
                 result = result.replace('_', white_text, 1)
-            prompt = f"A humorous short video scene: {result}"
+            prompt = f"You will receive a short description of a scenario from the game Cards Against Humanity. Your task is to interpret this scenario and generate a humorous, absurd, and visually engaging video that captures the comedic tone and timing of the scene. Use cinematic creativity, playful exaggeration, and expressive character actions to bring the humor to life. Description: {result}"
         
         print(f"🎬 Generating video with prompt: {prompt[:100]}...")
         

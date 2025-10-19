@@ -32,6 +32,8 @@ export interface Submission {
   player_id: string | null;
   cards: WhiteCard[];
   video_url?: string;
+  image_url?: string;
+  audio_url?: string;
 }
 
 export interface Round {

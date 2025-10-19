@@ -68,6 +68,39 @@ export const useGame = (socket: Socket | null) => {
       setNotification('Video is ready!');
     });
 
+    socket.on('submission_media_ready', (data: { submission_index: number; image_url: string; audio_url: string }) => {
+      console.log('🖼️ Media ready for submission:', data);
+      console.log('📥 Image URL:', data.image_url);
+      console.log('📥 Audio URL:', data.audio_url);
+      
+      // Update game state with image and audio URLs
+      setGameState((prevState) => {
+        if (!prevState || !prevState.current_round) {
+          console.log('⚠️ No game state or current round');
+          return prevState;
+        }
+        
+        console.log('📝 Updating submission', data.submission_index);
+        const updatedSubmissions = prevState.current_round.submissions.map((sub, idx) => 
+          idx === data.submission_index ? {
+            ...sub,
+            image_url: data.image_url,
+            audio_url: data.audio_url
+          } : sub
+        );
+        
+        console.log('✅ Updated submissions:', updatedSubmissions);
+        
+        return {
+          ...prevState,
+          current_round: {
+            ...prevState.current_round,
+            submissions: updatedSubmissions
+          }
+        };
+      });
+    });
+
     socket.on('submission_videos_ready', (data: { videos: Record<number, string> }) => {
       console.log('📹 All submission videos ready:', data.videos);
       // Update game state with video URLs for each submission
@@ -149,11 +182,11 @@ export const useGame = (socket: Socket | null) => {
     }
   }, [socket, gameId, playerId]);
 
-  const requestAIJoin = useCallback((personality: string = 'absurd') => {
+  const requestAIJoin = useCallback(() => {
     console.log('🤖 Frontend: requestAIJoin called', { socket: !!socket, gameId });
     if (socket && gameId) {
-      console.log('🤖 Frontend: Emitting request_ai_join', { game_id: gameId, personality });
-      socket.emit('request_ai_join', { game_id: gameId, personality });
+      console.log('🤖 Frontend: Emitting request_ai_join', { game_id: gameId });
+      socket.emit('request_ai_join', { game_id: gameId });
     } else {
       console.error('❌ Frontend: Cannot emit - socket or gameId missing', { socket: !!socket, gameId });
     }

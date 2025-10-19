@@ -17,6 +17,9 @@ class Submission(BaseModel):
     player_id: str
     card_ids: List[str]
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+    image_url: Optional[str] = None
+    audio_url: Optional[str] = None
+    video_url: Optional[str] = None
 
 
 class Round(BaseModel):

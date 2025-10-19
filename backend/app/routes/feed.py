@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from typing import List, Optional
 from ..services.supabase_service import supabase_service
+from ..services.feed_service import feed_service
 
 
 router = APIRouter(prefix="/api/feed", tags=["feed"])
@@ -31,22 +32,42 @@ class VideoResponse(BaseModel):
     comments_count: int
 
 
-@router.get("/videos", response_model=List[VideoResponse])
+@router.get("/videos")
 async def get_videos_feed(
-    limit: int = Query(20, ge=1, le=50),
+    limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0)
 ):
-    """Get video feed (TikTok/Reel style) - Only winning videos"""
+    """Get video feed (TikTok/Reel style) - All videos from storage bucket"""
     try:
-        # Only fetch videos that have been copied to winning bucket
-        # These are the videos that won rounds
-        videos = await supabase_service.get_videos_feed(limit=limit, offset=offset)
+        # List all files from videos storage bucket
+        result = supabase_service.client.storage.from_('videos').list()
         
-        # Filter to only include videos with winner_id (winning videos)
-        winning_videos = [v for v in videos if v.get('winner_id')]
+        # Convert to video objects with public URLs
+        videos = []
+        for file in result:
+            if file.get('name') and file['name'].endswith('.mp4'):
+                video_url = supabase_service.client.storage.from_('videos').get_public_url(file['name'])
+                # Remove trailing ?
+                if video_url.endswith('?'):
+                    video_url = video_url[:-1]
+                
+                videos.append({
+                    'id': file['name'].replace('.mp4', ''),
+                    'video_url': video_url,
+                    'black_card_text': 'Generated Content',
+                    'white_card_texts': [],
+                    'winner_name': 'Player',
+                    'created_at': file.get('created_at', ''),
+                    'likes': 0,
+                    'views': 0
+                })
         
-        return winning_videos
+        # Apply pagination
+        start = offset
+        end = offset + limit
+        return videos[start:end]
     except Exception as e:
+        print(f"❌ Error fetching videos from storage: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -104,5 +125,25 @@ async def get_comments(video_id: str, limit: int = Query(50, ge=1, le=100)):
     try:
         comments = await supabase_service.get_video_comments(video_id, limit=limit)
         return comments
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/trending")
+async def get_trending_videos(limit: int = Query(10, ge=1, le=20)):
+    """Get trending videos (most liked/viewed)"""
+    try:
+        videos = await feed_service.get_trending(limit=limit)
+        return videos
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/view/{video_id}")
+async def increment_video_view(video_id: str):
+    """Increment video view count"""
+    try:
+        success = await feed_service.increment_views(video_id)
+        return {"success": success}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

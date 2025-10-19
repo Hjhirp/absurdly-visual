@@ -4,6 +4,9 @@ from typing import List
 
 
 class Settings(BaseSettings):
+    # Environment
+    ENV: str = Field(default="development", env="ENV")
+    
     # Server Configuration
     HOST: str = "0.0.0.0"
     PORT: int = Field(default=8000, env="PORT")  # Railway sets PORT env var
@@ -17,7 +20,7 @@ class Settings(BaseSettings):
     SUPABASE_WINNING_BUCKET: str = "winning-videos"
     
     
-    # AI Services (Gemini API used for both Gemini and Veo3)
+    # AI Services (Gemini API used for images, videos, and text)
     GEMINI_API_KEY: str = ""
     VIDEO_FETCH_TIMEOUT: int = 90  # Time to wait for video to be ready in Supabase
     USE_VEO3_FAST: bool = True

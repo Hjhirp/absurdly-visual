@@ -11,13 +11,22 @@ from ..config import settings
 class AIService:
     """Service for AI player decisions and video generation"""
     
+    PERSONALITIES = [
+        "absurd", "edgy", "wholesome", "chaotic", 
+        "sarcastic", "punny", "dark_humor", "innocent"
+    ]
+    
     def __init__(self):
         """Initialize AI service with Gemini"""
         if settings.GEMINI_API_KEY:
             genai.configure(api_key=settings.GEMINI_API_KEY)
-            self.model = genai.GenerativeModel('gemini-pro')
+            self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
         else:
             self.model = None
+    
+    def get_random_personality(self) -> str:
+        """Get a random AI personality for variety"""
+        return random.choice(self.PERSONALITIES)
     
     async def generate_text(self, prompt: str) -> str:
         """
@@ -73,9 +82,14 @@ class AIService:
                 cards_text = "\n".join([f"{i+1}. {card['text']}" for i, card in enumerate(available_cards)])
                 
                 personality_instructions = {
-                    "absurd": "Choose the most absurd, unexpected, and hilarious combinations.",
-                    "edgy": "Choose the darkest, most controversial, and edgy combinations.",
-                    "wholesome": "Choose the most wholesome, heartwarming, and funny combinations."
+                    "absurd": "Choose the most absurd, unexpected, and hilarious combinations. Be weird and random.",
+                    "edgy": "Choose the darkest, most controversial, and edgy combinations. Push boundaries.",
+                    "wholesome": "Choose the most wholesome, heartwarming, and funny combinations. Keep it sweet.",
+                    "chaotic": "Choose the most chaotic, nonsensical, and unpredictable combinations. Embrace chaos.",
+                    "sarcastic": "Choose the most sarcastic, ironic, and deadpan combinations. Be cynical.",
+                    "punny": "Choose combinations that create puns, wordplay, or clever references.",
+                    "dark_humor": "Choose combinations with dark, morbid humor. Be twisted but funny.",
+                    "innocent": "Choose combinations that sound innocent but have double meanings."
                 }
                 
                 prompt = f"""You are playing Cards Against Humanity. Select the {pick_count} funniest white card(s) to complete this black card.
