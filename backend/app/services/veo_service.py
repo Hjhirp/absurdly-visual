@@ -58,15 +58,11 @@ class VeoService:
             print(f"🎬 Generating video with {model}")
             print(f"📝 Prompt: {prompt[:100]}...")
             
-            # Start video generation with 720p quality
-            from google.genai import types
-            
+            # Start video generation
+            # Note: Resolution config not available in current API version
             operation = client.models.generate_videos(
                 model=model,
-                prompt=prompt,
-                config=types.GenerateVideoConfig(
-                    resolution="720p",  # Lower quality for faster generation
-                )
+                prompt=prompt
             )
             
             print(f"⏳ Video generation started, polling for completion...")
