@@ -43,10 +43,8 @@ def register_socket_events(sio: socketio.AsyncServer):
         if has_submitted or player_id == game.current_round.czar_id:
             return
         
-        # Wait random time (5-30 seconds) before AI submits (more realistic)
-        wait_time = random.randint(5, 30)
-        print(f"⏳ AI player {player.name} thinking for {wait_time} seconds...")
-        await asyncio.sleep(wait_time)
+        # AI submits instantly (no wait time for hackathon demo)
+        print(f"🤖 AI player {player.name} selecting cards...")
         
         # Re-check game state after delay
         game = game_service.get_game(game_id)
