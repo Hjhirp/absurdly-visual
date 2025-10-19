@@ -61,6 +61,16 @@ class NanobananaService:
                 )
             )
             
+            # Check if response has candidates
+            if not response.candidates:
+                print(f"❌ No candidates in response. Response: {response}")
+                return None
+            
+            # Check if candidate has content
+            if not response.candidates[0].content:
+                print(f"❌ No content in candidate. Candidate: {response.candidates[0]}")
+                return None
+            
             # Extract image from response
             for part in response.candidates[0].content.parts:
                 if part.inline_data is not None:

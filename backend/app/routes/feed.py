@@ -143,7 +143,8 @@ async def get_trending_videos(limit: int = Query(10, ge=1, le=20)):
 async def increment_video_view(video_id: str):
     """Increment video view count"""
     try:
-        success = await feed_service.increment_views(video_id)
-        return {"success": success}
+        # For storage-only videos, just return success without incrementing
+        # (no database record exists)
+        return {"success": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

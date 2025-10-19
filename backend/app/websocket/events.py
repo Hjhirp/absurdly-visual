@@ -115,10 +115,9 @@ def register_socket_events(sio: socketio.AsyncServer):
             
             czar = game_service.get_player(game.current_round.czar_id)
             if czar and czar.type == PlayerType.AI:
-                # AI judges after waiting for media to generate
-                # Wait longer to allow images + audio to be ready
-                print(f"🤖 AI Czar waiting for media generation...")
-                await asyncio.sleep(15)  # Wait 15 seconds for media to generate
+                # AI judges after waiting for media to generate and for humans to view
+                print(f"🤖 AI Czar waiting for media generation and human review...")
+                await asyncio.sleep(30)  # Wait 30 seconds for media + human viewing time
                 
                 black_card = card_service.get_black_card(game.current_round.black_card_id)
                 submissions_data = []

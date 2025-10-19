@@ -240,11 +240,7 @@ Respond with ONLY the number of the winning submission (e.g., "2" or "5"). No ex
         # Use Gemini to create a better video prompt
         if self.model:
             try:
-                prompt = f"""Convert this Cards Against Humanity combination into a SHORT, vivid 4-second video scene (max 50 words):
-
-"{result}"
-
-Focus on ONE clear visual action or scene. Be specific and concrete. Keep it simple for fast video generation."""
+                prompt = f"""You will receive a short description of a scenario from the game Cards Against Humanity. Your task is to interpret this scenario and generate a humorous, absurd, and visually engaging video that captures the comedic tone and timing of the scene. Use cinematic creativity, playful exaggeration, and expressive character actions to bring the humor to life. Always speak and act the description. Description: {result}"""
 
                 response = await asyncio.to_thread(
                     self.model.generate_content,
