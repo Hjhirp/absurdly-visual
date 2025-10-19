@@ -9,7 +9,7 @@ from .routes import feed
 # Create Socket.IO server
 sio = socketio.AsyncServer(
     async_mode='asgi',
-    cors_allowed_origins=settings.cors_origins_list,
+    cors_allowed_origins='*',  # Allow all origins for now
     logger=True,
     engineio_logger=True
 )
