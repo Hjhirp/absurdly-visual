@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 interface LobbyProps {
-  onCreateGame: (playerName: string) => void;
+  onCreateGame: (playerName: string, settings?: any) => void;
   onJoinGame: (gameId: string, playerName: string) => void;
 }
 
@@ -9,10 +9,21 @@ export const Lobby: React.FC<LobbyProps> = ({ onCreateGame, onJoinGame }) => {
   const [playerName, setPlayerName] = useState('');
   const [gameId, setGameId] = useState('');
   const [mode, setMode] = useState<'menu' | 'create' | 'join'>('menu');
+  const [selectedTopic, setSelectedTopic] = useState<string>('base');
+
+  const topics = [
+    { value: 'base', label: '🎲 All Topics (Base + All)' },
+    { value: 'gaming', label: '🎮 Gaming' },
+    { value: 'tech', label: '💻 Tech' },
+    { value: 'sports', label: '⚽ Sports' },
+    { value: 'art', label: '🎨 Art' },
+    { value: 'politics', label: '🏛️ Politics' },
+  ];
 
   const handleCreateGame = () => {
     if (playerName.trim()) {
-      onCreateGame(playerName.trim());
+      const settings = selectedTopic !== 'base' ? { topic: selectedTopic } : {};
+      onCreateGame(playerName.trim(), settings);
     }
   };
 
@@ -80,6 +91,30 @@ export const Lobby: React.FC<LobbyProps> = ({ onCreateGame, onJoinGame }) => {
                 className="w-full px-4 py-3 rounded-lg bg-game-bg text-white border-2 border-gray-700 focus:border-game-highlight focus:outline-none"
                 maxLength={50}
               />
+              
+              {/* Topic Selection */}
+              <div>
+                <label className="block text-white text-sm font-semibold mb-2">
+                  Select Topic:
+                </label>
+                <select
+                  value={selectedTopic}
+                  onChange={(e) => setSelectedTopic(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg bg-game-bg text-white border-2 border-gray-700 focus:border-game-highlight focus:outline-none cursor-pointer"
+                >
+                  {topics.map((topic) => (
+                    <option key={topic.value} value={topic.value}>
+                      {topic.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-gray-400 text-xs mt-1">
+                  {selectedTopic === 'base' 
+                    ? 'Play with all cards from all topics' 
+                    : `Play with ${selectedTopic}-themed cards only`
+                  }
+                </p>
+              </div>
               <div className="flex space-x-3">
                 <button
                   onClick={handleCreateGame}

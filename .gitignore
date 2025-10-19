@@ -23,6 +23,9 @@ build/
 .env
 .env.local
 .env.*.local
+.staging
+.env.stage
+.env.prod
 
 # IDEs
 .vscode/
