@@ -1,6 +1,8 @@
 -- Supabase Database Schema for Absurdly Visual
 
 -- Cards tables
+-- pack column is used for both pack names and topic filtering
+-- Valid pack values: 'base', 'Gaming', 'Tech', 'Sports', 'Art', 'Politics'
 CREATE TABLE IF NOT EXISTS black_cards (
     id TEXT PRIMARY KEY,
     text TEXT NOT NULL,

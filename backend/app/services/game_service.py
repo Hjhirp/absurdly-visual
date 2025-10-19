@@ -18,9 +18,9 @@ class GameService:
         game = Game(**(settings or {}))
         game.players.append(creator_id)
         
-        # Initialize decks
-        game.black_deck = card_service.create_shuffled_deck("black")
-        game.white_deck = card_service.create_shuffled_deck("white", game.censorship_level)
+        # Initialize decks with topic filter
+        game.black_deck = card_service.create_shuffled_deck("black", topic=game.topic)
+        game.white_deck = card_service.create_shuffled_deck("white", game.censorship_level, topic=game.topic)
         
         self.games[game.id] = game
         return game

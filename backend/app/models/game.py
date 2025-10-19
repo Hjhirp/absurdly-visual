@@ -48,6 +48,7 @@ class Game(BaseModel):
     points_to_win: int = Field(default=7)
     cards_per_hand: int = Field(default=5)
     censorship_level: str = Field(default="mild")  # none, mild, family
+    topic: Optional[str] = Field(default=None, description="Game topic filter (Gaming, Tech, Sports, Art, Politics)")
     
     # Current round
     current_round: Optional[Round] = None

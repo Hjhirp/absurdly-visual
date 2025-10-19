@@ -12,7 +12,7 @@ class Card(BaseModel):
     id: str = Field(..., description="Unique card identifier")
     text: str = Field(..., description="Card text content")
     type: CardType = Field(..., description="Card type (black or white)")
-    pack: str = Field(default="base", description="Card pack name")
+    pack: str = Field(default="base", description="Card pack/topic name (base, Gaming, Tech, Sports, Art, Politics)")
     
     class Config:
         use_enum_values = True

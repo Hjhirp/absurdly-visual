@@ -109,18 +109,32 @@ class CardService:
         """Get a specific white card"""
         return self.white_cards.get(card_id)
     
-    def get_random_black_cards(self, count: int, exclude: List[str] = None) -> List[str]:
-        """Get random black card IDs"""
+    def get_random_black_cards(self, count: int, exclude: List[str] = None, topic: Optional[str] = None) -> List[str]:
+        """Get random black card IDs with optional topic filtering"""
         exclude = exclude or []
-        available = [cid for cid in self.black_cards.keys() if cid not in exclude]
+        
+        # Filter by topic if specified (using pack column)
+        available = []
+        for cid, card in self.black_cards.items():
+            if cid in exclude:
+                continue
+            
+            # If specific topic is selected, use ONLY that topic
+            # If no topic or 'base', include ALL cards
+            if topic and topic != 'base':
+                if card.pack == topic:
+                    available.append(cid)
+            else:
+                available.append(cid)
+        
         return random.sample(available, min(count, len(available)))
     
     def get_random_white_cards(self, count: int, exclude: List[str] = None, 
-                               censorship_level: str = "mild") -> List[str]:
-        """Get random white card IDs with censorship filtering"""
+                               censorship_level: str = "mild", topic: Optional[str] = None) -> List[str]:
+        """Get random white card IDs with censorship and topic filtering"""
         exclude = exclude or []
         
-        # Filter based on censorship level
+        # Filter based on censorship level and topic
         available = []
         for card_id, card in self.white_cards.items():
             if card_id in exclude:
@@ -129,19 +143,43 @@ class CardService:
             if censorship_level == "family" and card.nsfw:
                 continue
             
-            available.append(card_id)
+            # If specific topic is selected, use ONLY that topic
+            # If no topic or 'base', include ALL cards
+            if topic and topic != 'base':
+                if card.pack == topic:
+                    available.append(card_id)
+            else:
+                available.append(card_id)
         
         return random.sample(available, min(count, len(available)))
     
-    def create_shuffled_deck(self, card_type: str, censorship_level: str = "mild") -> List[str]:
-        """Create a shuffled deck of card IDs"""
+    def create_shuffled_deck(self, card_type: str, censorship_level: str = "mild", topic: Optional[str] = None) -> List[str]:
+        """Create a shuffled deck of card IDs with optional topic filtering"""
         if card_type == "black":
-            deck = list(self.black_cards.keys())
+            if topic and topic != 'base':
+                # Use ONLY the specified topic
+                deck = [
+                    card_id for card_id, card in self.black_cards.items()
+                    if card.pack == topic
+                ]
+            else:
+                # Use ALL cards
+                deck = list(self.black_cards.keys())
         else:
-            deck = [
-                card_id for card_id, card in self.white_cards.items()
-                if censorship_level != "family" or not card.nsfw
-            ]
+            deck = []
+            for card_id, card in self.white_cards.items():
+                # Censorship filter
+                if censorship_level == "family" and card.nsfw:
+                    continue
+                
+                # Topic filter (using pack column)
+                if topic and topic != 'base':
+                    # Use ONLY the specified topic
+                    if card.pack == topic:
+                        deck.append(card_id)
+                else:
+                    # Use ALL cards
+                    deck.append(card_id)
         
         random.shuffle(deck)
         return deck
