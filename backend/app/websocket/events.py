@@ -314,12 +314,18 @@ def register_socket_events(sio: socketio.AsyncServer):
                 'message': 'Generating video with Veo3... (this may take 1-2 minutes)'
             }, room=game_id)
             
-            # Call Fetch.ai uAgent (returns UUID)
-            result = await fetchai_service.generate_video(
-                prompt=prompt,
-                black_card=black_card.text,
-                white_cards=white_texts
-            )
+            # Generate video directly with Veo3 (not using Fetch.ai for now)
+            from ..services.veo_service import veo_service
+            import uuid
+            
+            video_id = str(uuid.uuid4())
+            video_url = await veo_service.generate_video(prompt)
+            
+            result = {
+                "video_id": video_id,
+                "supabase_url": video_url,
+                "message": "Video generated successfully"
+            } if video_url else None
             
             if result and result.get("video_id"):
                 video_id = result["video_id"]

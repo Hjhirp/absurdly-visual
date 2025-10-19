@@ -22,10 +22,6 @@ class Settings(BaseSettings):
     
     # AI Services (Gemini API used for both Gemini and Veo3)
     GEMINI_API_KEY: str = ""
-    
-    # Video Configuration
-    VIDEO_CACHE_DURATION: int = 86400  # 24 hours
-    VIDEO_GENERATION_TIMEOUT: int = 90  # Video generation timeout (90 seconds)
     VIDEO_FETCH_TIMEOUT: int = 90  # Time to wait for video to be ready in Supabase
     USE_VEO3_FAST: bool = True
     VIDEO_DURATION: int = 4  # Duration in seconds (4-8)
