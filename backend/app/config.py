@@ -16,9 +16,6 @@ class Settings(BaseSettings):
     SUPABASE_BUCKET: str = "videos"
     SUPABASE_WINNING_BUCKET: str = "winning-videos"
     
-    # Fetch.ai uAgent Configuration
-    FETCHAI_AGENT_ADDRESS: str = ""
-    FETCHAI_AGENT_ENDPOINT: str = ""
     
     # AI Services (Gemini API used for both Gemini and Veo3)
     GEMINI_API_KEY: str = ""

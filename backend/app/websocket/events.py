@@ -6,8 +6,8 @@ from ..services.game_service import game_service
 from ..services.card_service import card_service
 from ..services.video_cache import video_cache
 from ..services.ai_service import ai_service
-from ..services.fetchai_service import fetchai_service
 from ..services.supabase_service import supabase_service
+from ..services.veo_service import veo_service
 from ..models.player import Player, AIPlayer, PlayerType
 from ..models.game import GameState
 from ..config import settings
@@ -314,8 +314,7 @@ def register_socket_events(sio: socketio.AsyncServer):
                 'message': 'Generating video with Veo3... (this may take 1-2 minutes)'
             }, room=game_id)
             
-            # Generate video directly with Veo3 (not using Fetch.ai for now)
-            from ..services.veo_service import veo_service
+            # Generate video directly with Veo3
             import uuid
             
             video_id = str(uuid.uuid4())
