@@ -189,11 +189,12 @@ export const TikTokFeed: React.FC = () => {
           )}
         </div>
 
-        {/* Navigation Arrows */}
+        {/* Navigation Arrows - Top/Bottom */}
         {currentIndex > 0 && (
           <button
             onClick={() => handleScroll('up')}
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-[60vh] text-white text-4xl hover:scale-110 transition-transform"
+            className="absolute top-8 left-1/2 transform -translate-x-1/2 bg-black/60 hover:bg-black/80 text-white w-14 h-14 rounded-full flex items-center justify-center text-3xl hover:scale-110 transition-all shadow-lg backdrop-blur-sm"
+            aria-label="Previous video"
           >
             ↑
           </button>
@@ -201,9 +202,30 @@ export const TikTokFeed: React.FC = () => {
         {currentIndex < videos.length - 1 && (
           <button
             onClick={() => handleScroll('down')}
-            className="absolute top-1/2 left-1/2 transform -translate-x-1/2 translate-y-[50vh] text-white text-4xl hover:scale-110 transition-transform"
+            className="absolute bottom-24 left-1/2 transform -translate-x-1/2 bg-black/60 hover:bg-black/80 text-white w-14 h-14 rounded-full flex items-center justify-center text-3xl hover:scale-110 transition-all shadow-lg backdrop-blur-sm"
+            aria-label="Next video"
           >
             ↓
+          </button>
+        )}
+        
+        {/* Navigation Arrows - Left/Right (Alternative) */}
+        {currentIndex > 0 && (
+          <button
+            onClick={() => handleScroll('up')}
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white w-12 h-12 rounded-full flex items-center justify-center text-2xl hover:scale-110 transition-all shadow-lg backdrop-blur-sm"
+            aria-label="Previous video"
+          >
+            ←
+          </button>
+        )}
+        {currentIndex < videos.length - 1 && (
+          <button
+            onClick={() => handleScroll('down')}
+            className="absolute left-4 bottom-1/3 transform bg-black/60 hover:bg-black/80 text-white w-12 h-12 rounded-full flex items-center justify-center text-2xl hover:scale-110 transition-all shadow-lg backdrop-blur-sm"
+            aria-label="Next video"
+          >
+            →
           </button>
         )}
 

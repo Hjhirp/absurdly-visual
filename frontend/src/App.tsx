@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { useSocket } from './hooks/useSocket';
 import { useGame } from './hooks/useGame';
 import { Lobby } from './components/Lobby';
@@ -107,6 +108,9 @@ function App() {
           </div>
         </div>
       )}
+      
+      {/* Vercel Analytics */}
+      <Analytics />
     </div>
   );
 }

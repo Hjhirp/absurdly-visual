@@ -37,8 +37,10 @@ async def get_videos_feed(
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0)
 ):
-    """Get video feed (TikTok/Reel style) - All videos from storage bucket"""
+    """Get video feed (TikTok/Reel style) - All videos from storage bucket (randomized)"""
     try:
+        import random
+        
         # List all files from videos storage bucket
         result = supabase_service.client.storage.from_('videos').list()
         
@@ -61,6 +63,9 @@ async def get_videos_feed(
                     'likes': 0,
                     'views': 0
                 })
+        
+        # Shuffle videos randomly
+        random.shuffle(videos)
         
         # Apply pagination
         start = offset
