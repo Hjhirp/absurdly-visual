@@ -50,14 +50,14 @@ class VeoService:
         try:
             client = self._get_client()
             
-            # Use veo-3.1-generate-preview model
-            model = "veo-3.1-generate-preview"
+            # Use veo-3.1-fast-generate-preview model
+            model = "veo-3.1-fast-generate-preview"
             
             print(f"🎬 Generating video with {model}")
             print(f"📝 Prompt: {prompt[:100]}...")
             
-            # Start video generation using the video generation API
-            # Veo requires a different API endpoint, not generate_content
+            # Start video generation
+            # Note: Resolution config not available in current API version
             operation = client.models.generate_videos(
                 model=model,
                 prompt=prompt
@@ -230,7 +230,7 @@ class VeoService:
             result = black_card_text
             for white_text in white_card_texts:
                 result = result.replace('_', white_text, 1)
-            prompt = f"You will receive a short description of a scenario from the game Cards Against Humanity. Your task is to interpret this scenario and generate a humorous, absurd, and visually engaging video that captures the comedic tone and timing of the scene. Use cinematic creativity, playful exaggeration, and expressive character actions to bring the humor to life. Always speak and act the description. Description: {result}"
+            prompt = f"A humorous short video scene: {result}"
         
         print(f"🎬 Generating video with prompt: {prompt[:100]}...")
         

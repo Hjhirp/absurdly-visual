@@ -51,7 +51,8 @@ class NanobananaService:
             print(f"🎨 Generating image with Gemini 2.5 Flash Image")
             print(f"📝 Prompt: {prompt[:100]}...")
             
-            # Generate image using Gemini
+            # Generate image using Gemini 2.5 Flash Image
+            # Run in executor since the SDK call is synchronous
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
                 None,
@@ -61,19 +62,12 @@ class NanobananaService:
                 )
             )
             
-            # Check if response has candidates
-            if not response.candidates:
-                print(f"❌ No candidates in response. Response: {response}")
-                return None
-            
-            # Check if candidate has content
-            if not response.candidates[0].content:
-                print(f"❌ No content in candidate. Candidate: {response.candidates[0]}")
-                return None
-            
-            # Extract image from response
+            # Process response - extract image from inline data
+            image_saved = False
             for part in response.candidates[0].content.parts:
-                if part.inline_data is not None:
+                if part.text is not None:
+                    print(f"📄 Text response: {part.text}")
+                elif part.inline_data is not None:
                     # Convert inline data to PIL Image
                     image = Image.open(BytesIO(part.inline_data.data))
                     
@@ -82,7 +76,7 @@ class NanobananaService:
                     temp_path = f"/tmp/{image_id}.png"
                     image.save(temp_path)
                     
-                    print(f"✅ Image generated: {temp_path}")
+                    print(f"✅ Image generated: {temp_path} (size: {image.size})")
                     
                     # Upload to Supabase for persistence
                     uploaded_url = await self._upload_to_supabase_from_file(temp_path)
@@ -91,9 +85,11 @@ class NanobananaService:
                     if os.path.exists(temp_path):
                         os.remove(temp_path)
                     
+                    image_saved = True
                     return uploaded_url
             
-            print(f"❌ No image data in response")
+            if not image_saved:
+                print(f"❌ No image data found in response")
             return None
                 
         except Exception as e:
