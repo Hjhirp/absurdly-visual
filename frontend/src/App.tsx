@@ -3,7 +3,7 @@ import { useSocket } from './hooks/useSocket';
 import { useGame } from './hooks/useGame';
 import { Lobby } from './components/Lobby';
 import { GameRoom } from './components/GameRoom';
-import { VideoFeed } from './components/VideoFeed';
+import { TikTokFeed } from './components/TikTokFeed';
 
 function App() {
   const [showFeed, setShowFeed] = useState(false);
@@ -86,7 +86,7 @@ function App() {
           >
             ← Back to Game
           </button>
-          <VideoFeed />
+          <TikTokFeed />
         </div>
       ) : !gameId || !playerId ? (
         <Lobby onCreateGame={createGame} onJoinGame={joinGame} />

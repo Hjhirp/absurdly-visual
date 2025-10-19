@@ -8,6 +8,7 @@ from ..services.video_cache import video_cache
 from ..services.ai_service import ai_service
 from ..services.supabase_service import supabase_service
 from ..services.veo_service import veo_service
+from ..services.content_moderator import content_moderator
 from ..models.player import Player, AIPlayer, PlayerType
 from ..models.game import GameState
 from ..config import settings
@@ -79,6 +80,12 @@ def register_socket_events(sio: socketio.AsyncServer):
                     if p and p.socket_id:
                         player_state = game_service.get_game_state_for_player(game_id, pid)
                         await sio.emit('game_state', safe_emit_data(player_state), room=p.socket_id)
+                
+                # Check if entered judging phase
+                if game.state == GameState.JUDGING:
+                    print(f"🎨 AI submission triggered judging phase, generating media")
+                    await sio.emit('judging_phase', {}, room=game_id)
+                    asyncio.create_task(generate_all_submission_media(game_id))
     
     async def handle_ai_turns(game_id: str):
         """Handle AI player turns (submissions and judging) - all in parallel"""
@@ -100,16 +107,18 @@ def register_socket_events(sio: socketio.AsyncServer):
         
         # Don't wait for tasks to complete - they run in background
         
-        # Check if entered judging phase - generate videos for all submissions in parallel
+        # Check if entered judging phase - generate images + audio for all submissions
         game = game_service.get_game(game_id)
         if game and game.state == GameState.JUDGING:
-            # Start parallel video generation for all submissions
-            asyncio.create_task(generate_all_submission_videos(game_id))
+            # Start parallel image + audio generation for all submissions
+            asyncio.create_task(generate_all_submission_media(game_id))
             
             czar = game_service.get_player(game.current_round.czar_id)
             if czar and czar.type == PlayerType.AI:
-                # AI judges after a delay
-                await asyncio.sleep(2)
+                # AI judges after waiting for media to generate
+                # Wait longer to allow images + audio to be ready
+                print(f"🤖 AI Czar waiting for media generation...")
+                await asyncio.sleep(15)  # Wait 15 seconds for media to generate
                 
                 black_card = card_service.get_black_card(game.current_round.black_card_id)
                 submissions_data = []
@@ -170,9 +179,9 @@ def register_socket_events(sio: socketio.AsyncServer):
                             # Trigger AI players for new round
                             asyncio.create_task(handle_ai_turns(game_id))
     
-    async def generate_all_submission_videos(game_id: str):
-        """Generate videos for all submissions in parallel during judging phase"""
-        print(f"🎬 Starting parallel video generation for all submissions in game {game_id}")
+    async def generate_all_submission_media(game_id: str):
+        """Generate images + audio for all submissions in parallel during judging phase"""
+        print(f"🎨 Starting parallel image + audio generation for all submissions in game {game_id}")
         game = game_service.get_game(game_id)
         if not game or not game.current_round:
             print(f"❌ Game or round not found")
@@ -181,22 +190,19 @@ def register_socket_events(sio: socketio.AsyncServer):
         try:
             black_card = card_service.get_black_card(game.current_round.black_card_id)
             
-            # Create tasks for all submissions
+            # Create tasks for all submissions (images + audio only)
             tasks = []
             for idx, submission in enumerate(game.current_round.submissions):
-                task = generate_submission_video(game_id, idx, black_card, submission)
+                task = generate_submission_media(game_id, idx, black_card, submission)
                 tasks.append(task)
             
-            # Run all video generations in parallel
-            print(f"🚀 Launching {len(tasks)} parallel video generation tasks")
+            # Run all media generations in parallel
+            print(f"🚀 Launching {len(tasks)} parallel image + audio generation tasks")
             results = await asyncio.gather(*tasks, return_exceptions=True)
             
             # Log results
             successful = sum(1 for r in results if r and not isinstance(r, Exception))
-            print(f"✅ Completed {successful}/{len(tasks)} video generations")
-            
-            # Now fetch all video URLs and send to players
-            await fetch_and_send_all_videos(game_id)
+            print(f"✅ Completed {successful}/{len(tasks)} image + audio generations")
             
         except Exception as e:
             print(f"❌ Error in parallel video generation: {e}")
@@ -279,73 +285,72 @@ def register_socket_events(sio: socketio.AsyncServer):
             print(f"⏳ Video not ready yet, waiting {check_interval}s before next check...")
             await asyncio.sleep(check_interval)
     
-    async def generate_submission_video(game_id: str, submission_index: int, black_card, submission):
-        """Generate video for a single submission"""
+    async def generate_submission_media(game_id: str, submission_index: int, black_card, submission):
+        """Generate image + narration for a single submission (no video)"""
         try:
-            # Emit progress: starting
-            await sio.emit('video_progress', {
-                'game_id': game_id,
-                'submission_index': submission_index,
-                'status': 'starting',
-                'message': 'Starting video generation...'
-            }, room=game_id)
-            
             white_cards = [card_service.get_white_card(cid) for cid in submission.card_ids]
             white_texts = [c.text for c in white_cards if c]
             
-            # Emit progress: generating prompt
+            # Step 1: Generate image + narration in parallel
             await sio.emit('video_progress', {
                 'game_id': game_id,
                 'submission_index': submission_index,
-                'status': 'prompt',
-                'message': 'Creating video prompt...'
+                'status': 'image',
+                'message': 'Generating image...'
             }, room=game_id)
+            
+            from ..services.nanobanana_service import nanobanana_service
+            from ..services.gemini_tts_service import gemini_tts_service
             
             # Generate prompt
             prompt = await ai_service.generate_video_prompt(black_card.text, white_texts)
             
-            # Emit progress: generating video
-            await sio.emit('video_progress', {
+            # Moderate prompt for safety
+            safe_prompt = await content_moderator.sanitize_prompt(prompt)
+            
+            # Parallel: image + narration
+            image_task = nanobanana_service.generate_image(safe_prompt, aspect_ratio="9:16")
+            narration_task = gemini_tts_service.generate_narrated_script(
+                black_card.text,
+                white_texts,
+                style="humorous"
+            )
+            
+            image_url, narration = await asyncio.gather(image_task, narration_task)
+            
+            # Store image and audio URLs on submission object
+            game = game_service.get_game(game_id)
+            if game and game.current_round and submission_index < len(game.current_round.submissions):
+                game.current_round.submissions[submission_index].image_url = image_url
+                game.current_round.submissions[submission_index].audio_url = narration.get('audio_url') if narration else None
+                print(f"💾 Stored URLs on submission {submission_index}: image={image_url is not None}, audio={narration.get('audio_url') is not None}")
+            
+            # Send image + audio immediately
+            media_data = {
                 'game_id': game_id,
                 'submission_index': submission_index,
-                'status': 'generating',
-                'message': 'Generating video with Veo3... (this may take 1-2 minutes)'
-            }, room=game_id)
+                'image_url': image_url,
+                'audio_url': narration.get('audio_url') if narration else None
+            }
+            print(f"📤 Emitting submission_media_ready: {media_data}")
+            await sio.emit('submission_media_ready', media_data, room=game_id)
             
-            # Generate video directly with Veo3
-            import uuid
+            # Update all players with new game state
+            for pid in game.players:
+                p = game_service.get_player(pid)
+                if p and p.socket_id:
+                    player_state = game_service.get_game_state_for_player(game_id, pid)
+                    await sio.emit('game_state', safe_emit_data(player_state), room=p.socket_id)
             
-            video_id = str(uuid.uuid4())
-            video_url = await veo_service.generate_video(prompt)
-            
-            result = {
-                "video_id": video_id,
-                "supabase_url": video_url,
-                "message": "Video generated successfully"
-            } if video_url else None
-            
-            if result and result.get("video_id"):
-                video_id = result["video_id"]
-                supabase_url = result.get("supabase_url")
-                print(f"✅ Video ID for submission {submission_index}: {video_id}")
-                print(f"📍 Will be available at: {supabase_url}")
-                
-                # Store video_id with submission (we'll fetch URL later when needed)
-                if not hasattr(submission, 'video_id'):
-                    submission.video_id = video_id
-                
-                return video_id
-            else:
-                print(f"❌ Failed to generate video for submission {submission_index}")
-                return None
+            print(f"✅ Image + audio generated for submission {submission_index}")
                 
         except Exception as e:
-            print(f"❌ Error generating video for submission {submission_index}: {e}")
+            print(f"❌ Error generating media for submission {submission_index}: {e}")
             return None
     
     async def generate_winner_video(game_id: str, submission_index: int):
-        """Fetch winner video from Supabase (already generated during judging)"""
-        print(f"🎬 Fetching winner video for game {game_id}")
+        """Generate video for winning submission only"""
+        print(f"🎬 Generating video for winner in game {game_id}")
         game = game_service.get_game(game_id)
         if not game or not game.current_round:
             print(f"❌ Game or round not found")
@@ -353,64 +358,71 @@ def register_socket_events(sio: socketio.AsyncServer):
         
         try:
             submission = game.current_round.submissions[submission_index]
+            black_card = card_service.get_black_card(game.current_round.black_card_id)
+            white_cards = [card_service.get_white_card(cid) for cid in submission.card_ids]
+            white_texts = [c.text for c in white_cards if c]
             
-            # Check if video_id was stored during parallel generation
-            video_id = getattr(submission, 'video_id', None)
+            # Generate prompt and moderate it
+            prompt = await ai_service.generate_video_prompt(black_card.text, white_texts)
+            safe_prompt = await content_moderator.sanitize_prompt(prompt)
             
-            if video_id:
-                print(f"📹 Found video ID: {video_id}")
+            # Generate video with Veo3
+            print(f"🎥 Generating video for winning submission...")
+            video_url = await veo_service.generate_video(safe_prompt)
+            
+            if video_url:
+                print(f"✅ Video generated: {video_url}")
                 
-                # Wait for video to be ready with timeout
-                video_url = await wait_for_video_ready(video_id, timeout=settings.VIDEO_FETCH_TIMEOUT)
+                # Save video metadata to Supabase
+                winner = game_service.get_player(submission.player_id)
+                video_data = {
+                    "black_card_text": black_card.text,
+                    "white_card_texts": white_texts,
+                    "video_url": video_url,
+                    "prompt": safe_prompt,
+                    "game_id": game_id,
+                    "winner_id": submission.player_id,
+                    "winner_name": winner.name if winner else "Unknown"
+                }
                 
-                if video_url:
-                    print(f"✅ Video URL retrieved: {video_url}")
+                db_video_id = await supabase_service.save_video(video_data)
+                if db_video_id:
+                    print(f"✅ Video metadata saved to Supabase: {db_video_id}")
                     
-                    # Get card data for metadata
-                    black_card = card_service.get_black_card(game.current_round.black_card_id)
-                    white_cards = [card_service.get_white_card(cid) for cid in submission.card_ids]
-                    white_texts = [c.text for c in white_cards if c]
-                    
-                    # Save video metadata to Supabase
-                    winner = game_service.get_player(submission.player_id)
-                    video_data = {
-                        "black_card_text": black_card.text,
-                        "white_card_texts": white_texts,
-                        "video_url": video_url,
-                        "prompt": "",  # Prompt was sanitized during generation
-                        "game_id": game_id,
-                        "winner_id": submission.player_id,
-                        "winner_name": winner.name if winner else "Unknown"
-                    }
-                    
-                    db_video_id = await supabase_service.save_video(video_data)
-                    if db_video_id:
-                        print(f"✅ Video metadata saved to Supabase: {db_video_id}")
-                        
-                        # Copy winning video to winning-videos bucket for feed
-                        winning_url = await supabase_service.copy_to_winning_bucket(video_id, db_video_id)
-                        if winning_url:
-                            print(f"🎉 Winning video added to feed: {winning_url}")
-                    
-                    # Update game state with video URL
-                    game.current_round.video_url = video_url
-                    
-                    # Notify all players
-                    await sio.emit('video_ready', {
+                    # Add to public feed
+                    from ..services.feed_service import feed_service
+                    feed_content = {
+                        'black_card': black_card.text,
+                        'white_cards': white_texts,
                         'video_url': video_url,
-                        'video_id': video_id
-                    }, room=game_id)
-                    
-                    # Send updated game state
-                    for pid in game.players:
-                        p = game_service.get_player(pid)
-                        if p and p.socket_id:
-                            player_state = game_service.get_game_state_for_player(game_id, pid)
-                            await sio.emit('game_state', safe_emit_data(player_state), room=p.socket_id)
-                else:
-                    print(f"⚠️  Video not ready yet, will retry...")
+                        'image_url': getattr(submission, 'image_url', None),
+                        'narration': {
+                            'audio_url': getattr(submission, 'audio_url', None)
+                        },
+                        'winner': {
+                            'player_id': winner.name if winner else "Unknown"
+                        }
+                    }
+                    feed_id = await feed_service.add_to_feed(feed_content)
+                    if feed_id:
+                        print(f"📱 Added to public feed: {feed_id}")
+                
+                # Update game state with video URL
+                game.current_round.video_url = video_url
+                
+                # Notify all players
+                await sio.emit('video_ready', {
+                    'video_url': video_url
+                }, room=game_id)
+                
+                # Send updated game state
+                for pid in game.players:
+                    p = game_service.get_player(pid)
+                    if p and p.socket_id:
+                        player_state = game_service.get_game_state_for_player(game_id, pid)
+                        await sio.emit('game_state', safe_emit_data(player_state), room=p.socket_id)
             else:
-                print(f"⚠️  No video ID found for submission {submission_index}")
+                print(f"⚠️  Video generation failed for winner")
                 
         except Exception as e:
             print(f"❌ Error generating video: {e}")
@@ -588,7 +600,9 @@ def register_socket_events(sio: socketio.AsyncServer):
                 }, room=game_id)
                 
                 # If all submitted, trigger AI players and move to judging
-                if game.state == "judging":
+                print(f"🔍 Game state after submission: {game.state}")
+                if game.state == GameState.JUDGING:
+                    print(f"🎨 Entering judging phase, triggering media generation")
                     # Send updated state
                     for pid in game.players:
                         player_state = game_service.get_game_state_for_player(game_id, pid)
@@ -597,6 +611,9 @@ def register_socket_events(sio: socketio.AsyncServer):
                             await sio.emit('game_state', player_state, room=p.socket_id)
                     
                     await sio.emit('judging_phase', {}, room=game_id)
+                    
+                    # Generate images + audio for all submissions
+                    asyncio.create_task(generate_all_submission_media(game_id))
                     
                     # Trigger AI czar to judge
                     asyncio.create_task(handle_ai_turns(game_id))
@@ -674,9 +691,10 @@ def register_socket_events(sio: socketio.AsyncServer):
         try:
             print(f"🤖 AI join request from {sid}")
             game_id = data.get('game_id')
-            personality = data.get('personality', 'absurd')
+            # Use random personality for variety
+            personality = ai_service.get_random_personality()
             
-            print(f"🤖 Adding AI to game {game_id}")
+            print(f"🤖 Adding AI to game {game_id} with personality: {personality}")
             ai_player = game_service.add_ai_player(game_id, personality)
             
             if ai_player:

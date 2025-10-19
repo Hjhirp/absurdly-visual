@@ -10,10 +10,14 @@ class PlayerType(str, Enum):
 
 
 class AIPersonality(str, Enum):
-    SAVAGE = "savage"
-    WHOLESOME = "wholesome"
     ABSURD = "absurd"
-    STRATEGIC = "strategic"
+    EDGY = "edgy"
+    WHOLESOME = "wholesome"
+    CHAOTIC = "chaotic"
+    SARCASTIC = "sarcastic"
+    PUNNY = "punny"
+    DARK_HUMOR = "dark_humor"
+    INNOCENT = "innocent"
 
 
 class Player(BaseModel):
