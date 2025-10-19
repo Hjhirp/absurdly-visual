@@ -13,6 +13,14 @@ class AIService:
     
     def __init__(self):
         """Initialize AI service with Gemini"""
+        self.system_prompt =  """
+        You will receive a short description of a scenario from the game Cards Against Humanity.
+        Your task is to interpret this scenario and generate a humorous, absurd, and visually engaging
+        video that captures the comedic tone and timing of the scene. Use cinematic creativity, playful
+        exaggeration, and expressive character actions to bring the humor to life.
+        Description:
+
+        """
         if settings.GEMINI_API_KEY:
             genai.configure(api_key=settings.GEMINI_API_KEY)
             self.model = genai.GenerativeModel('gemini-pro')
@@ -226,7 +234,7 @@ Focus on ONE clear visual action or scene. Be specific and concrete. Keep it sim
 
                 response = await asyncio.to_thread(
                     self.model.generate_content,
-                    prompt
+                    self.system_prompt + prompt
                 )
                 
                 generated = response.text.strip()
