@@ -90,7 +90,7 @@ class VeoService:
     
     def _wait_for_video(self, client, operation):
         """Wait for video generation to complete and upload to Supabase (blocking)"""
-        max_wait = 120  # 2 minutes max
+        max_wait = 180  # 3 minutes max (Veo3 can be slow)
         start_time = time.time()
         
         while not operation.done:
@@ -126,25 +126,32 @@ class VeoService:
             
             # Upload to Supabase storage
             file_path = f"{video_id}.mp4"
-            result = supabase_service.client.storage.from_(settings.SUPABASE_BUCKET).upload(
-                file_path,
-                video_data,
-                file_options={"content-type": "video/mp4"}
-            )
             
-            if result:
-                # Get public URL
-                video_url = supabase_service.client.storage.from_(settings.SUPABASE_BUCKET).get_public_url(file_path)
-                print(f"✅ Video uploaded to Supabase: {video_url}")
+            try:
+                result = supabase_service.client.storage.from_(settings.SUPABASE_BUCKET).upload(
+                    file_path,
+                    video_data,
+                    file_options={"content-type": "video/mp4"}
+                )
                 
-                # Clean up temp file
-                import os
-                os.remove(temp_path)
-                
-                return video_url
-            else:
-                print(f"❌ Failed to upload to Supabase")
-                return None
+                if result:
+                    # Get public URL
+                    video_url = supabase_service.client.storage.from_(settings.SUPABASE_BUCKET).get_public_url(file_path)
+                    print(f"✅ Video uploaded to Supabase: {video_url}")
+                    
+                    # Clean up temp file
+                    import os
+                    os.remove(temp_path)
+                    
+                    return video_url
+                else:
+                    print(f"❌ Failed to upload to Supabase")
+                    return None
+                    
+            except Exception as upload_error:
+                print(f"❌ Supabase upload error: {upload_error}")
+                print(f"⚠️  Returning local file path as fallback")
+                return temp_path
             
         except Exception as e:
             print(f"❌ Error processing video: {e}")

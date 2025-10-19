@@ -284,11 +284,35 @@ def register_socket_events(sio: socketio.AsyncServer):
     async def generate_submission_video(game_id: str, submission_index: int, black_card, submission):
         """Generate video for a single submission"""
         try:
+            # Emit progress: starting
+            await sio.emit('video_progress', {
+                'game_id': game_id,
+                'submission_index': submission_index,
+                'status': 'starting',
+                'message': 'Starting video generation...'
+            }, room=game_id)
+            
             white_cards = [card_service.get_white_card(cid) for cid in submission.card_ids]
             white_texts = [c.text for c in white_cards if c]
             
+            # Emit progress: generating prompt
+            await sio.emit('video_progress', {
+                'game_id': game_id,
+                'submission_index': submission_index,
+                'status': 'prompt',
+                'message': 'Creating video prompt...'
+            }, room=game_id)
+            
             # Generate prompt
             prompt = await ai_service.generate_video_prompt(black_card.text, white_texts)
+            
+            # Emit progress: generating video
+            await sio.emit('video_progress', {
+                'game_id': game_id,
+                'submission_index': submission_index,
+                'status': 'generating',
+                'message': 'Generating video with Veo3... (this may take 1-2 minutes)'
+            }, room=game_id)
             
             # Call Fetch.ai uAgent (returns UUID)
             result = await fetchai_service.generate_video(

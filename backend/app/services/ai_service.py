@@ -19,6 +19,29 @@ class AIService:
         else:
             self.model = None
     
+    async def generate_text(self, prompt: str) -> str:
+        """
+        Generate text using Gemini
+        
+        Args:
+            prompt: The text generation prompt
+            
+        Returns:
+            Generated text
+        """
+        if not self.model:
+            raise Exception("Gemini API not configured")
+        
+        try:
+            response = await asyncio.to_thread(
+                self.model.generate_content,
+                prompt
+            )
+            return response.text
+        except Exception as e:
+            print(f"❌ Gemini text generation error: {e}")
+            raise
+    
     async def select_cards(
         self, 
         black_card_text: str, 
