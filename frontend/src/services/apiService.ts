@@ -1,4 +1,4 @@
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_URL = process.env.REACT_APP_API_URL || 'https://absurdly-visual-production.up.railway.app';
 
 class ApiService {
   private baseUrl: string;

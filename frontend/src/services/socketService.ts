@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 
-const SOCKET_URL = process.env.REACT_APP_WS_URL || 'http://localhost:8000';
+const SOCKET_URL = process.env.REACT_APP_WS_URL || 'https://absurdly-visual-production.up.railway.app';
 
 class SocketService {
   private socket: Socket | null = null;
