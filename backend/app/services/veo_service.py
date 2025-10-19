@@ -14,19 +14,17 @@ class VeoService:
     
     def __init__(self):
         """Initialize Veo service"""
-        self.api_key = settings.GEMINI_API_KEY
-        # Set API key as environment variable for genai client
-        if self.api_key:
-            os.environ['GOOGLE_API_KEY'] = self.api_key
-        self.client = None
         self.use_fast = settings.USE_VEO3_FAST
         self.default_duration = settings.VIDEO_DURATION
     
     def _get_client(self):
-        """Get or create GenAI client"""
-        if self.client is None:
-            self.client = genai.Client(api_key=self.api_key)
-        return self.client
+        """Get or create GenAI client with fresh API key"""
+        # Always get fresh API key from settings
+        api_key = settings.GEMINI_API_KEY
+        if api_key:
+            os.environ['GOOGLE_API_KEY'] = api_key
+        # Create new client each time to ensure fresh API key
+        return genai.Client(api_key=api_key)
     
     async def generate_video(
         self,
@@ -45,7 +43,7 @@ class VeoService:
         Returns:
             Video file path or None if generation fails
         """
-        if not self.api_key:
+        if not settings.GEMINI_API_KEY:
             print("⚠️  No Gemini API key configured for Veo3")
             return None
         
